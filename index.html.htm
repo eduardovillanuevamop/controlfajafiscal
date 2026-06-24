@@ -1,0 +1,831 @@
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control_Faja_Fiscal</title>
+
+    <!-- Librería para exportar información a Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+    <style>
+        /* =========================
+           ESTILOS GENERALES
+        ========================= */
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 20px;
+        }
+
+        h1 {
+            color: #003b75;
+        }
+
+        .card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, .15);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px;
+        }
+
+        button {
+            padding: 10px 14px;
+            margin: 4px;
+            cursor: pointer;
+        }
+
+        /* =========================
+           TABLA
+        ========================= */
+        
+        
+        
+        
+        
+        
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 6px;
+        }
+
+        th {
+            background: #003b75;
+            color: white;
+        }
+
+        /* =========================
+           COLORES SEMÁFORO
+        ========================= */
+        .verde {
+            background: #d4edda;
+        }
+
+        .amarillo {
+            background: #fff3cd;
+        }
+
+        .rojo {
+            background: #f8d7da;
+        }
+
+        .azul {
+            background: #cfe2ff;
+        }
+
+        /* =========================
+           DASHBOARD
+        ========================= */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .ind {
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+
+        .t {
+            background: #003b75;
+        }
+
+        .v {
+            background: #28a745;
+        }
+
+        .a {
+            background: #ffc107;
+            color: black;
+        }
+
+        .r {
+            background: #dc3545;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Control de Notificaciones de Faja Fiscal</h1>
+
+    <!-- =========================
+         PANEL DE INDICADORES
+    ========================== -->
+        <div class="dashboard">
+        
+            <div class="ind t">
+                <h2 id="totalGeneral">0</h2>
+                Total
+            </div>
+        
+            <div class="ind v">
+                <h2 id="contVerdes">0</h2>
+                Vigentes
+            </div>
+        
+            <div class="ind a">
+                <h2 id="contAmarillos">0</h2>
+                Por vencer
+            </div>
+        
+            <div class="ind r">
+                <h2 id="contRojos">0</h2>
+                Vencidas
+            </div>
+        
+            <div class="ind" style="background:#0d6efd">
+                <h2 id="contCerrados">0</h2>
+                Cerrados
+            </div>
+        
+        </div>
+
+    <!-- =========================
+         FORMULARIO DE INGRESO
+    ========================== -->
+    <div class="card">
+
+        <div class="grid">
+
+            <input id="proceso" placeholder="N° Proceso">
+            <input id="asunto" placeholder="Asunto">
+            <input id="rol" placeholder="Rol">
+            <input id="km" placeholder="Km">
+
+            <select id="tipoOcupacion">
+                <option value="">Tipo Ocupación</option>
+                <option>Acceso</option>
+                <option>Atravieso</option>
+                <option>Paralelismo</option>
+                <option>Otro</option>
+            </select>
+
+            <input id="fecha" type="date">
+            <input id="plazo" type="number" placeholder="Plazo (días)">
+
+            <select id="estado">
+                <option>Pendiente</option>
+                <option>En Revisión</option>
+                <option>Respondido</option>
+                <option>Cerrado</option>
+            </select>
+
+            <input id="responsable" placeholder="Responsable">
+
+        </div>
+
+        <p>
+            <textarea id="obs" placeholder="Observaciones"></textarea>
+        </p>
+
+        <button onclick="guardar()">Guardar</button>
+        <button onclick="exportarExcel()">Exportar Excel</button>
+        <input type="file" id="archivoExcel" accept=".xlsx,.xls">
+        <button onclick="importarExcel()">    Importar Excel </button>
+        
+        <button onclick="borrarTodos()">🗑️ Borrar Todo</button>
+
+
+    </div>
+
+    <!-- =========================
+         TABLA DE REGISTROS
+    ========================== -->
+      <!--filtro de tabla-->
+           <div class="card">
+        
+            <div class="grid">
+        
+                <input
+                    type="text"
+                    id="buscar"
+                    placeholder="Buscar Proceso, Asunto, Rol o Responsable"
+                    onkeyup="mostrar()">
+        
+                <select id="filtroEstado" onchange="mostrar()">
+                    <option value="">Todos los estados</option>
+                    <option>Pendiente</option>
+                    <option>En Revisión</option>
+                    <option>Respondido</option>
+                    <option>Cerrado</option>
+                </select>
+        
+                <select id="ordenarPor" onchange="mostrar()">
+                    <option value="fechaFinal">Ordenar por Fecha Final</option>
+                    <option value="proceso">Ordenar por Proceso</option>
+                    <option value="estado">Ordenar por Estado</option>
+                    <option value="dias">Ordenar por Días Restantes</option>
+                </select>
+    
+        </div>
+
+</div>
+   
+    <table>
+
+        <thead>
+            <tr>
+                <th>Proceso</th>
+                <th>Asunto</th>
+                <th>Rol</th>
+                <th>Km</th>
+                <th>Tipo</th>
+                <th>Ingreso</th>
+                <th>Plazo</th>
+                <th>Fecha Final</th>
+                <th>Días Restantes</th>
+                <th>Estado</th>
+                <th>Responsable</th>
+                <th>Semáforo</th>
+                <th>Observaciones</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody id="tb"></tbody>
+
+    </table>
+
+    <script>
+
+        /* ==================================================
+           VARIABLES GLOBALES
+        ================================================== */
+
+        // Recupera registros almacenados localmente
+        let datos = JSON.parse(
+            localStorage.getItem('fajaFiscal') || '[]'
+        );
+
+        // Índice del registro en edición
+        let editando = -1;
+
+        /* ==================================================
+           FUNCIONES DE FECHAS
+        ================================================== */
+
+        /**
+         * Calcula la fecha final agregando días al ingreso.
+         */
+        function calcularFechaFinal(fecha, plazo) {
+
+            if (!fecha || !plazo) return '';
+
+            let fechaBase = new Date(fecha);
+
+            fechaBase.setDate(
+                fechaBase.getDate() + Number(plazo)
+            );
+
+            return fechaBase.toISOString().split('T')[0];
+        }
+
+        /**
+         * Calcula los días restantes al vencimiento.
+         */
+        function diasRestantes(fechaFinal) {
+
+            let hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+
+            let fecha = new Date(fechaFinal);
+            fecha.setHours(0, 0, 0, 0);
+
+            return Math.ceil(
+                (fecha - hoy) / 86400000
+            );
+        }
+
+        /* ==================================================
+           FUNCIONES DE SEMÁFORO
+        ================================================== */
+
+        /**
+         * Retorna color según estado del expediente.
+         */
+        function obtenerColor(fechaFinal, estado) {
+
+            if (estado === 'Cerrado') return 'azul';
+
+            let restantes = diasRestantes(fechaFinal);
+
+            if (restantes < 0) return 'rojo';
+            if (restantes <= 5) return 'amarillo';
+
+            return 'verde';
+        }
+
+        /**
+         * Retorna icono de semáforo.
+         */
+        function obtenerSemaforo(fechaFinal, estado) {
+
+            if (estado === 'Cerrado') return '🔵';
+
+            let restantes = diasRestantes(fechaFinal);
+
+            if (restantes < 0) return '🔴';
+            if (restantes <= 5) return '🟡';
+
+            return '🟢';
+        }
+
+        /* ==================================================
+           CRUD DE REGISTROS
+        ================================================== */
+
+        /**
+         * Guarda o actualiza un registro.
+         */
+        function guardar() {
+            
+            
+            
+                // Verificar que el N° de proceso no exista
+                const procesoActual = proceso.value.trim().toUpperCase();
+                
+                const existe = datos.some((r, index) =>
+                    String(r.proceso).trim().toUpperCase() === procesoActual &&
+                    index !== editando
+                );
+                
+                if (existe) {
+                
+                    alert(
+                        "El N° de Proceso ya existe en la base de datos.\n\n" +
+                        "Ingrese un número diferente o edite el registro existente."
+                    );
+                
+                    proceso.focus();
+                    return;
+                }
+
+            let registro = {
+
+                proceso: proceso.value,
+                asunto: asunto.value,
+                rol: rol.value,
+                km: km.value,
+
+                tipoOcupacion: tipoOcupacion.value,
+
+                fecha: fecha.value,
+                plazo: plazo.value,
+
+                fechaFinal: calcularFechaFinal(
+                    fecha.value,
+                    plazo.value
+                ),
+
+                estado: estado.value,
+                responsable: responsable.value,
+                obs: obs.value
+            };
+
+            if (editando >= 0) {
+
+                datos[editando] = registro;
+                editando = -1;
+
+            } else {
+
+                datos.push(registro);
+            }
+
+            localStorage.setItem(
+                'fajaFiscal',
+                JSON.stringify(datos)
+            );
+            
+            // Limpiar filtro de búsqueda
+            
+            document.getElementById('buscar').value = '';
+            document.getElementById('filtroEstado').value = '';
+            document.getElementById('ordenarPor').value = 'fechaFinal';
+
+            mostrar();
+            limpiarFormulario();
+
+        }
+
+        /**
+         * Carga un registro para editar.
+         */
+        function editar(indice) {
+
+            let r = datos[indice];
+
+            proceso.value = r.proceso;
+            asunto.value = r.asunto;
+            rol.value = r.rol;
+            km.value = r.km;
+            tipoOcupacion.value = r.tipoOcupacion;
+            fecha.value = r.fecha;
+            plazo.value = r.plazo;
+            estado.value = r.estado;
+            responsable.value = r.responsable;
+            obs.value = r.obs;
+
+            editando = indice;
+        }
+       
+        /**
+         * Elimina un registro.
+         */
+        function eliminar(indice) {
+
+            if (confirm('¿Eliminar registro?')) {
+
+                datos.splice(indice, 1);
+
+                localStorage.setItem(
+                    'fajaFiscal',
+                    JSON.stringify(datos)
+                );
+
+                mostrar();
+            }
+        }
+
+        /* ==================================================
+           VISUALIZACIÓN
+        ================================================== */
+
+        /**
+         * Actualiza tabla y dashboard.
+         */
+           function mostrar() {
+    
+        let html = '';
+    
+        let verdes = 0;
+        let amarillos = 0;
+        let rojos = 0;
+        let celeste = 0;
+       
+        // Filtros
+        const textoBusqueda =
+            document.getElementById('buscar')?.value
+            ?.toUpperCase() || '';
+    
+        const estadoFiltro =
+            document.getElementById('filtroEstado')?.value || '';
+    
+        const orden =
+            document.getElementById('ordenarPor')?.value || 'fechaFinal';
+    
+        // Copia de trabajo
+        let lista = [...datos];
+    
+        // Buscar texto
+        lista = lista.filter(r =>
+    
+            String(r.proceso).toUpperCase().includes(textoBusqueda) ||
+    
+            String(r.asunto).toUpperCase().includes(textoBusqueda) ||
+    
+            String(r.rol).toUpperCase().includes(textoBusqueda) ||
+    
+            String(r.responsable).toUpperCase().includes(textoBusqueda)
+        );
+    
+        // Filtrar estado
+        if (estadoFiltro !== '') {
+    
+            lista = lista.filter(
+                r => r.estado === estadoFiltro
+            );
+        }
+    
+        // Ordenar
+        lista.sort((a, b) => {
+    
+            switch (orden) {
+    
+                case 'proceso':
+                    return String(a.proceso)
+                        .localeCompare(String(b.proceso));
+    
+                case 'estado':
+                    return String(a.estado)
+                        .localeCompare(String(b.estado));
+    
+                case 'dias':
+                    return diasRestantes(a.fechaFinal) -
+                           diasRestantes(b.fechaFinal);
+    
+                default:
+                    return new Date(a.fechaFinal) -
+                           new Date(b.fechaFinal);
+            }
+        });
+    
+        // Construcción de tabla
+        lista.forEach((r, i) => {
+    
+            let color =
+                obtenerColor(r.fechaFinal, r.estado);
+    
+            let dias =
+                diasRestantes(r.fechaFinal);
+    
+            if (color === 'verde') verdes++;
+            if (color === 'amarillo') amarillos++;
+            if (color === 'rojo') rojos++;
+            if (r.estado === 'Cerrado') celeste++;
+    
+            html += `
+            <tr class="${color}">
+                <td>${r.proceso}</td>
+                <td>${r.asunto}</td>
+                <td>${r.rol}</td>
+                <td>${r.km}</td>
+                <td>${r.tipoOcupacion || ''}</td>
+                <td>${r.fecha}</td>
+                <td>${r.plazo}</td>
+                <td>${r.fechaFinal}</td>
+                <td>${dias}</td>
+                <td>${r.estado}</td>
+                <td>${r.responsable}</td>
+                <td>${obtenerSemaforo(r.fechaFinal,r.estado)}</td>
+                <td>${r.obs}</td>
+                <td>
+                    <button onclick="editar(${datos.indexOf(r)})">✏️</button>
+                    <button onclick="eliminar(${datos.indexOf(r)})">🗑️</button>
+                </td>
+            </tr>`;
+        });
+    
+        tb.innerHTML = html;
+    
+        totalGeneral.innerText = lista.length;
+        contVerdes.innerText = verdes;
+        contAmarillos.innerText = amarillos;
+        contRojos.innerText = rojos;
+        contCerrados.innerText = celeste;
+    }
+    ``
+
+        /* ==================================================
+           EXPORTAR A EXCEL
+        ================================================== */
+
+        /**
+         * Exporta todos los registros a Excel.
+         */
+        function exportarExcel() {
+
+            let hoja = XLSX.utils.json_to_sheet(datos);
+
+            let libro = XLSX.utils.book_new();
+
+            XLSX.utils.book_append_sheet(
+                libro,
+                hoja,
+                'Notificaciones'
+            );
+
+            XLSX.writeFile(
+                libro,
+                'Control_Faja_Fiscal.xlsx'
+            );
+        }
+
+        /* ==================================================
+           INICIO
+        ================================================== */
+
+        // Muestra los registros almacenados al cargar la página
+        mostrar();
+        cargarFechaActual();
+        ``
+        /**
+ * Importa una base de datos desde Excel
+ * y reemplaza los registros actuales.
+ */
+ 
+         /* ==================================================
+           Importar excel
+        ================================================== */
+
+     
+        
+        function importarExcel() {
+        
+            const archivo =
+                document.getElementById('archivoExcel').files[0];
+        
+            if (!archivo) {
+        
+                alert('Seleccione un archivo Excel.');
+                return;
+            }
+        
+            const lector = new FileReader();
+        
+            lector.onload = function (e) {
+        
+                const datosBinarios = e.target.result;
+        
+                const workbook = XLSX.read(
+                    datosBinarios,
+                    { type: 'binary' }
+                );
+        
+                const nombreHoja =
+                    workbook.SheetNames[0];
+        
+                const hoja =
+                    workbook.Sheets[nombreHoja];
+        
+                const registros =
+                    XLSX.utils.sheet_to_json(hoja);
+        
+                // Normalizar campos
+                registros.forEach(r => {
+        
+                    r.proceso = r.proceso || "";
+                    r.asunto = r.asunto || "";
+                    r.rol = r.rol || "";
+                    r.km = r.km || "";
+                    r.fecha = r.fecha || "";
+                    r.plazo = r.plazo || "";
+                    r.fechaFinal = r.fechaFinal || "";
+                    r.estado = r.estado || "Pendiente";
+                    r.responsable = r.responsable || "";
+                    r.obs = r.obs || "";
+                    r.tipoOcupacion = r.tipoOcupacion || "";
+                });
+        
+                // Preguntar qué hacer
+                const opcion = confirm(
+                    "¿Desea REEMPLAZAR toda la base actual?\n\n" +
+                    "Si = Borrar todo e importar el archivo.\n" +
+                    "No, Mantener = Mantener los registros actuales y agregar sólo los nuevos."
+                );
+        
+                // OPCIÓN 1: Reemplazar
+                if (opcion) {
+        
+                    datos = registros;
+        
+                    localStorage.setItem(
+                        'fajaFiscal',
+                        JSON.stringify(datos)
+                    );
+        
+                    mostrar();
+        
+                    alert(
+                        `Base reemplazada correctamente.\n\n` +
+                        `Registros importados: ${registros.length}`
+                    );
+        
+                    return;
+                }
+        
+                // OPCIÓN 2: Mantener y agregar
+                let nuevosRegistros = [];
+                let duplicados = [];
+        
+                registros.forEach(registro => {
+        
+                    let existe = datos.some(r =>
+                        String(r.proceso).trim().toUpperCase() ===
+                        String(registro.proceso).trim().toUpperCase()
+                    );
+        
+                    if (existe) {
+        
+                        duplicados.push(registro.proceso);
+        
+                    } else {
+        
+                        nuevosRegistros.push(registro);
+                    }
+                });
+        
+                datos = [...datos, ...nuevosRegistros];
+        
+                localStorage.setItem(
+                    'fajaFiscal',
+                    JSON.stringify(datos)
+                );
+        
+                mostrar();
+        
+                alert(
+                    "Importación finalizada.\n\n" +
+                    `Nuevos registros: ${nuevosRegistros.length}\n` +
+                    `Duplicados omitidos: ${duplicados.length}\n` +
+                    `Total en la base: ${datos.length}`
+                );
+            };
+        
+            lector.readAsBinaryString(archivo);
+        }
+                        
+                        
+
+         /* ==================================================
+           Limpiar formulario
+        ================================================== */
+
+                                    
+             function limpiarFormulario() {
+            
+                proceso.value = "";
+                asunto.value = "";
+                rol.value = "";
+                km.value = "";
+            
+                tipoOcupacion.value = "";
+            
+                fecha.value = new Date().toISOString().split('T')[0];
+                plazo.value = "";
+            
+                estado.value = "Pendiente";
+            
+                responsable.value = "";
+                obs.value = "";
+            
+                editando = -1;
+                proceso.focus();
+            }
+            
+     /* ==================================================
+         Borrar registro boton
+        ================================================== */
+            
+            function borrarTodos() {
+
+                const texto = prompt(
+                    'Para confirmar escriba ELIMINAR'
+                );
+            
+                if (texto !== 'ELIMINAR') {
+            
+                    alert('Operación cancelada.');
+                    return;
+                }
+            
+                datos = [];
+            
+                localStorage.removeItem('fajaFiscal');
+            
+                mostrar();
+            
+                limpiarFormulario();
+            
+                alert(
+                    'Base de datos eliminada correctamente.'
+                );
+            }
+            
+            
+     /* ==================================================
+         fecha actual como defecto
+        ================================================== */
+            
+            function cargarFechaActual() {
+
+             const hoy = new Date();
+
+            const fechaActual = hoy.toISOString().split('T')[0];
+        
+            document.getElementById('fecha').value = fechaActual;
+        }
+
+    </script>
+
+</body>
+</html>
